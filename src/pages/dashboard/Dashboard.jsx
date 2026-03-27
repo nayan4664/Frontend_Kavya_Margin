@@ -97,6 +97,35 @@ const Dashboard = () => {
       setStats(response.data);
     } catch (error) {
       console.error('Failed to fetch dashboard stats:', error);
+      // Set fallback data so the dashboard still displays
+      setStats({
+        kpis: {
+          totalMargin: '₹0.0M',
+          operationalCost: '₹0.0M',
+          utilization: '0%',
+          successRate: '0%'
+        },
+        moduleInsights: [
+          { label: 'Organization', status: 'Active', value: '0 Depts', color: 'text-blue-400' },
+          { label: 'Employee Cost', status: 'On Track', value: '₹0.0M', color: 'text-indigo-400' },
+          { label: 'Billing', status: 'Active', value: '0 Configs', color: 'text-violet-400' },
+          { label: 'Bench Management', status: 'Optimization', value: '0 Resources', color: 'text-amber-400' },
+          { label: 'Contract Analyzer', status: '0 Total', value: '0% Compliance', color: 'text-emerald-400' },
+          { label: 'AI Prediction', status: '0% Acc', value: '0 High Risks', color: 'text-purple-400' },
+          { label: 'Invoicing', status: '0 Pending', value: '₹0.0M Due', color: 'text-rose-400' },
+          { label: 'Margin Tracker', status: 'Monitoring', value: '0% Avg', color: 'text-cyan-400' },
+          { label: 'Resource Allocation', status: 'Active', value: '0/0 Assigned', color: 'text-orange-400' },
+          { label: 'Revenue Forecast', status: '0 Reports', value: '₹0.0M Total', color: 'text-green-400' },
+        ],
+        performanceData: [
+          { month: 'Jan', revenue: 0, margin: 0, cost: 0 },
+          { month: 'Feb', revenue: 0, margin: 0, cost: 0 },
+          { month: 'Mar', revenue: 0, margin: 0, cost: 0 },
+          { month: 'Apr', revenue: 0, margin: 0, cost: 0 },
+          { month: 'May', revenue: 0, margin: 0, cost: 0 },
+          { month: 'Jun', revenue: 0, margin: 0, cost: 0 },
+        ]
+      });
     } finally {
       setIsRefreshing(false);
       setLoading(false);
