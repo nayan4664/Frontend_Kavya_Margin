@@ -152,7 +152,9 @@ const AddEmployeeCost = () => {
       navigate('/employee-cost/list');
     } catch (error) {
       console.error('Failed to save employee:', error);
-      alert('Failed to save employee cost data');
+      // Show the actual error message from the backend
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to save employee cost data';
+      alert(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
