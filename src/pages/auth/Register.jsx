@@ -52,7 +52,7 @@ const Register = () => {
       }
 
       // Enforce: first digit after +91 must be 7, 8, or 9
-      if (digits.length > 0 && !['7', '8', '9'].includes(digits[0])) {
+      if (digits.length > 0 && !['6','7', '8', '9'].includes(digits[0])) {
         return;
       }
       

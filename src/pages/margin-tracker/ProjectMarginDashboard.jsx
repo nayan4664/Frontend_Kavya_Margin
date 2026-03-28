@@ -262,13 +262,15 @@ const ProjectMarginDashboard = () => {
                 <Filter className="w-4 h-4" />
                 More Filters
               </button>
-              <button 
-                onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-bold hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20"
-              >
-                <Plus className="w-4 h-4" />
-                Add Project
-              </button>
+              {currentUser?.role !== 'Viewers' && (
+                <button 
+                  onClick={() => setShowAddModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-bold hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Project
+                </button>
+              )}
             </div>
           </div>
 
@@ -313,13 +315,15 @@ const ProjectMarginDashboard = () => {
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Margin</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Revenue</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Status</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Actions</th>
+                {currentUser?.role !== 'Viewers' && (
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-slate-500 font-bold tracking-widest uppercase text-[10px]">Loading margins...</td>
+                  <td colSpan={currentUser?.role === 'Viewers' ? "5" : "6"} className="px-6 py-12 text-center text-slate-500 font-bold tracking-widest uppercase text-[10px]">Loading margins...</td>
                 </tr>
               ) : filteredProjects.length > 0 ? (
                 filteredProjects.map((p) => (
@@ -355,29 +359,31 @@ const ProjectMarginDashboard = () => {
                         {p.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200">
-                        <button 
-                          onClick={() => handleEditProject(p)}
-                          className="p-2 text-slate-500 hover:text-primary-400 hover:bg-slate-800 rounded-lg transition-all"
-                          title="Edit Project"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteProject(p._id)}
-                          className="p-2 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-all"
-                          title="Delete Project"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {currentUser?.role !== 'Viewers' && (
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200">
+                          <button 
+                            onClick={() => handleEditProject(p)}
+                            className="p-2 text-slate-500 hover:text-primary-400 hover:bg-slate-800 rounded-lg transition-all"
+                            title="Edit Project"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteProject(p._id)}
+                            className="p-2 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-all"
+                            title="Delete Project"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-slate-500 font-bold tracking-widest uppercase text-[10px]">No projects tracked yet.</td>
+                  <td colSpan={currentUser?.role === 'Viewers' ? "5" : "6"} className="px-6 py-12 text-center text-slate-500 font-bold tracking-widest uppercase text-[10px]">No projects tracked yet.</td>
                 </tr>
               )}
             </tbody>

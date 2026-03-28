@@ -4,7 +4,7 @@ export const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
   const themeValues = useMemo(() => ({
-    theme: 'dark',
+    theme: "dark",
     isDarkMode: true,
     toggleTheme: () => {}, // No-op
   }), []);
