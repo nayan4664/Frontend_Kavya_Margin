@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calculator, RefreshCw, Download, ArrowRight, PieChart as PieChartIcon } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { exportToCSV } from '../../utils/exportUtils';
+import { marginCalculationAPI } from '../../services/api';
 
 const MarginCalculator = () => {
   const [currentUser, setCurrentUser] = React.useState(null);
@@ -60,19 +61,23 @@ const MarginCalculator = () => {
 
   const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
 
-  const handleSaveToScenarios = () => {
-    const existing = JSON.parse(localStorage.getItem('mock_scenarios')) || [];
-    const newScenario = {
-      id: Date.now(),
-      name: `Scenario ${existing.length + 1}`,
-      billingRate: inputs.billingRate,
-      resourceCost: inputs.resourceCost,
-      utilization: inputs.utilization,
-      margin: results.marginPercent,
-      date: new Date().toISOString()
+  const handleSaveToScenarios = async () => {
+    const name = prompt('Enter a name for this scenario:', `Scenario ${Date.now()}`);
+    if (!name) return;
+
+    const data = {
+      name,
+      ...inputs,
+      ...results
     };
-    localStorage.setItem('mock_scenarios', JSON.stringify([newScenario, ...existing]));
-    alert('Scenario saved successfully! You can view it in Scenario Simulator.');
+
+    try {
+      await marginCalculationAPI.create(data);
+      alert('Calculation saved to Atlas successfully!');
+    } catch (error) {
+      console.error('Failed to save calculation:', error);
+      alert('Failed to save calculation to Atlas');
+    }
   };
 
   return (

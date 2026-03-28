@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Download, Search, Filter, AlertCircle, CheckCircle2, IndianRupee } from 'lucide-react';
+import { BarChart3, TrendingUp, Download, Search, Filter, AlertCircle, CheckCircle2, IndianRupee, Plus, X, Edit2, Trash2 } from 'lucide-react';
 import { 
   BarChart, 
   Bar, 
@@ -19,6 +19,15 @@ const ProjectMarginDashboard = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
+  const [newProject, setNewProject] = useState({
+    name: '',
+    client: '',
+    margin: '',
+    revenue: '',
+    status: 'On Track'
+  });
   const [filters, setFilters] = useState({
     status: 'All',
     marginRange: 'All'
@@ -39,6 +48,55 @@ const ProjectMarginDashboard = () => {
       console.error("Error fetching projects:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitProject = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingProject) {
+        const response = await marginAPI.update(editingProject._id, {
+          ...newProject,
+          margin: Number(newProject.margin)
+        });
+        setProjects(projects.map(p => p._id === editingProject._id ? response.data : p));
+      } else {
+        const response = await marginAPI.create({
+          ...newProject,
+          margin: Number(newProject.margin)
+        });
+        setProjects([response.data, ...projects]);
+      }
+      setShowAddModal(false);
+      setEditingProject(null);
+      setNewProject({ name: '', client: '', margin: '', revenue: '', status: 'On Track' });
+    } catch (err) {
+      console.error("Error saving project:", err);
+      alert("Failed to save project");
+    }
+  };
+
+  const handleEditProject = (project) => {
+    setEditingProject(project);
+    setNewProject({
+      name: project.name,
+      client: project.client,
+      margin: project.margin,
+      revenue: project.revenue,
+      status: project.status
+    });
+    setShowAddModal(true);
+  };
+
+  const handleDeleteProject = async (id) => {
+    if (window.confirm("Are you sure you want to delete this project?")) {
+      try {
+        await marginAPI.delete(id);
+        setProjects(projects.filter(p => p._id !== id));
+      } catch (err) {
+        console.error("Error deleting project:", err);
+        alert("Failed to delete project");
+      }
     }
   };
 
@@ -76,7 +134,7 @@ const ProjectMarginDashboard = () => {
     ? projects.reduce((acc, curr) => {
         // Extract number from "₹4.5M"
         const val = parseFloat(curr.revenue.replace(/[^0-9.]/g, ''));
-        return acc + val;
+        return isNaN(val) ? acc : acc + val;
       }, 0).toFixed(1)
     : 0;
 
@@ -194,15 +252,24 @@ const ProjectMarginDashboard = () => {
                 className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-transparent rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 outline-none text-slate-200"
               />
             </div>
-            <button 
-              onClick={() => setShowMoreFilters(!showMoreFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
-                showMoreFilters ? 'bg-primary-500/10 border-primary-500/50 text-primary-400' : 'bg-slate-800/50 text-slate-300 border-slate-700 hover:bg-slate-800'
-              }`}
-            >
-              <Filter className="w-4 h-4" />
-              More Filters
-            </button>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setShowMoreFilters(!showMoreFilters)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
+                  showMoreFilters ? 'bg-primary-500/10 border-primary-500/50 text-primary-400' : 'bg-slate-800/50 text-slate-300 border-slate-700 hover:bg-slate-800'
+                }`}
+              >
+                <Filter className="w-4 h-4" />
+                More Filters
+              </button>
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-bold hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20"
+              >
+                <Plus className="w-4 h-4" />
+                Add Project
+              </button>
+            </div>
           </div>
 
           {showMoreFilters && (
@@ -218,6 +285,7 @@ const ProjectMarginDashboard = () => {
                   <option value="On Track">On Track</option>
                   <option value="Pending">Pending</option>
                   <option value="At Risk">At Risk</option>
+                  <option value="Exceeding">Exceeding</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -245,16 +313,17 @@ const ProjectMarginDashboard = () => {
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Margin</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Revenue</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Status</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500 font-bold tracking-widest uppercase text-[10px]">Loading margins...</td>
+                  <td colSpan="6" className="px-6 py-12 text-center text-slate-500 font-bold tracking-widest uppercase text-[10px]">Loading margins...</td>
                 </tr>
               ) : filteredProjects.length > 0 ? (
                 filteredProjects.map((p) => (
-                  <tr key={p._id} className="hover:bg-slate-800/50 transition-colors">
+                  <tr key={p._id} className="hover:bg-slate-800/50 transition-colors group">
                     <td className="px-6 py-4">
                       <span className="text-sm font-bold text-slate-200">{p.name}</span>
                     </td>
@@ -286,17 +355,149 @@ const ProjectMarginDashboard = () => {
                         {p.status}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200">
+                        <button 
+                          onClick={() => handleEditProject(p)}
+                          className="p-2 text-slate-500 hover:text-primary-400 hover:bg-slate-800 rounded-lg transition-all"
+                          title="Edit Project"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteProject(p._id)}
+                          className="p-2 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-all"
+                          title="Delete Project"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500 font-bold tracking-widest uppercase text-[10px]">No projects tracked yet.</td>
+                  <td colSpan="6" className="px-6 py-12 text-center text-slate-500 font-bold tracking-widest uppercase text-[10px]">No projects tracked yet.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Add Project Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                {editingProject ? (
+                  <>
+                    <Edit2 className="w-5 h-5 text-primary-500" />
+                    Edit Project
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-5 h-5 text-primary-500" />
+                    Add New Project
+                  </>
+                )}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowAddModal(false);
+                  setEditingProject(null);
+                  setNewProject({ name: '', client: '', margin: '', revenue: '', status: 'On Track' });
+                }}
+                className="p-2 hover:bg-slate-800 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmitProject} className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Project Name</label>
+                <input 
+                  type="text" 
+                  required
+                  value={newProject.name}
+                  onChange={(e) => setNewProject({...newProject, name: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary-500/20 text-slate-200"
+                  placeholder="e.g. Project Alpha"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Client</label>
+                <input 
+                  type="text" 
+                  required
+                  value={newProject.client}
+                  onChange={(e) => setNewProject({...newProject, client: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary-500/20 text-slate-200"
+                  placeholder="e.g. TechCorp"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Margin (%)</label>
+                  <input 
+                    type="number" 
+                    required
+                    value={newProject.margin}
+                    onChange={(e) => setNewProject({...newProject, margin: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary-500/20 text-slate-200"
+                    placeholder="e.g. 32"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Revenue</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={newProject.revenue}
+                    onChange={(e) => setNewProject({...newProject, revenue: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary-500/20 text-slate-200"
+                    placeholder="e.g. ₹4.5M"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Status</label>
+                <select 
+                  value={newProject.status}
+                  onChange={(e) => setNewProject({...newProject, status: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary-500/20 text-slate-200"
+                >
+                  <option value="On Track">On Track</option>
+                  <option value="Pending">Pending</option>
+                  <option value="At Risk">At Risk</option>
+                  <option value="Exceeding">Exceeding</option>
+                </select>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-700 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-bold hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/20"
+                >
+                  {editingProject ? 'Update Project' : 'Add Project'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

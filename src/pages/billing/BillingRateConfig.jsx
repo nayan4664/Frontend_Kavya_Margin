@@ -1,18 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { IndianRupee, Plus, Trash2, Edit2, Download, Info, Search } from 'lucide-react';
 import { exportToCSV } from '../../utils/exportUtils';
+import { rateConfigAPI } from '../../services/api';
 
 const BillingRateConfig = () => {
-  const [rates, setRates] = useState(() => {
-    const storedRates = localStorage.getItem('billingRates');
-    return storedRates ? JSON.parse(storedRates) : [
-      { id: 1, role: 'Senior Architect', offshore: 3500, onshore: 9500, currency: 'INR', status: 'Active' },
-      { id: 2, role: 'Full Stack Developer', offshore: 2200, onshore: 7500, currency: 'INR', status: 'Active' },
-      { id: 3, role: 'UI/UX Lead', offshore: 2800, onshore: 8200, currency: 'INR', status: 'Active' },
-      { id: 4, role: 'Project Manager', offshore: 3200, onshore: 8800, currency: 'INR', status: 'Active' },
-      { id: 5, role: 'QA Engineer', offshore: 1800, onshore: 6500, currency: 'INR', status: 'Active' },
-    ];
-  });
+  const [rates, setRates] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -24,11 +17,20 @@ const BillingRateConfig = () => {
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser'));
     setCurrentUser(user);
+    fetchRates();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('billingRates', JSON.stringify(rates));
-  }, [rates]);
+  const fetchRates = async () => {
+    try {
+      setLoading(true);
+      const response = await rateConfigAPI.getAll();
+      setRates(response.data);
+    } catch (error) {
+      console.error('Failed to fetch rates:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredRates = rates.filter(r => r.role.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -50,18 +52,23 @@ const BillingRateConfig = () => {
     setShowForm(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (currentUser?.role === 'Team Lead') {
       alert('Unauthorized: Team Leads cannot delete records.');
       return;
     }
     if (window.confirm('Are you sure you want to delete this rate?')) {
-      const updatedRates = rates.filter(r => r.id !== id);
-      setRates(updatedRates);
+      try {
+        await rateConfigAPI.delete(id);
+        setRates(rates.filter(r => r._id !== id));
+      } catch (error) {
+        console.error('Failed to delete rate:', error);
+        alert('Failed to delete rate');
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validation for Role (no numbers allowed)
@@ -70,13 +77,20 @@ const BillingRateConfig = () => {
       return;
     }
 
-    if (editingRate) {
-      setRates(rates.map(r => r.id === editingRate.id ? { ...r, ...formData } : r));
-    } else {
-      setRates([...rates, { ...formData, id: Date.now(), status: 'Active' }]);
+    try {
+      if (editingRate) {
+        const response = await rateConfigAPI.update(editingRate._id, formData);
+        setRates(rates.map(r => r._id === editingRate._id ? response.data : r));
+      } else {
+        const response = await rateConfigAPI.create(formData);
+        setRates([...rates, response.data]);
+      }
+      setShowForm(false);
+      setErrors({});
+    } catch (error) {
+      console.error('Failed to save rate:', error);
+      alert('Failed to save rate');
     }
-    setShowForm(false);
-    setErrors({});
   };
 
   return (
@@ -220,7 +234,7 @@ const BillingRateConfig = () => {
             </thead>
             <tbody className="divide-y divide-slate-800">
               {filteredRates.map((rate) => (
-                <tr key={rate.id} className="hover:bg-slate-800/50 transition-colors group">
+                <tr key={rate._id} className="hover:bg-slate-800/50 transition-colors group">
                   <td className="px-6 py-4">
                     <span className="text-sm font-bold text-slate-200">{rate.role}</span>
                   </td>
@@ -243,7 +257,7 @@ const BillingRateConfig = () => {
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => handleDelete(rate.id)}
+                          onClick={() => handleDelete(rate._id)}
                           className="p-2 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-all"
                         >
                           <Trash2 className="w-4 h-4" />

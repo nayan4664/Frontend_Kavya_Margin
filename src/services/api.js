@@ -179,6 +179,21 @@ export const departmentAPI = {
   delete: (id) => api.delete(`/departments/${id}`),
 };
 
+// Rate Config Services
+export const rateConfigAPI = {
+  getAll: () => api.get('/rate-configs'),
+  create: (data) => api.post('/rate-configs', data),
+  update: (id, data) => api.put(`/rate-configs/${id}`, data),
+  delete: (id) => api.delete(`/rate-configs/${id}`),
+};
+
+// Margin Calculation Services
+export const marginCalculationAPI = {
+  getAll: () => api.get('/margin-calculations'),
+  create: (data) => api.post('/margin-calculations', data),
+  delete: (id) => api.delete(`/margin-calculations/${id}`),
+};
+
 // Dashboard Services
 export const dashboardAPI = {
   getStats: () => api.get('/dashboard/stats'),

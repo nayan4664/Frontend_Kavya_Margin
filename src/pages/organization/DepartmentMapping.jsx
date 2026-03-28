@@ -35,6 +35,17 @@ const DepartmentMapping = () => {
     }
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+    if (!newDept.name.trim()) newErrors.name = 'Department Name is required';
+    if (!newDept.head.trim()) newErrors.head = 'Department Head is required';
+    if (!newDept.staffCount) newErrors.staffCount = 'Staff Count is required';
+    if (!newDept.budget.trim()) newErrors.budget = 'Budget is required';
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleAddDept = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;

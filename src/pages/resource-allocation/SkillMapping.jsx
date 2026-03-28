@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Search, Download, Star, Filter, Code2, Database, Layout, Settings, Plus, X } from 'lucide-react';
+import { Target, Search, Download, Star, Filter, Code2, Database, Layout, Settings, Plus, X, Edit2, Trash2 } from 'lucide-react';
 import { exportToCSV } from '../../utils/exportUtils';
 import { resourceAPI } from '../../services/api';
 
@@ -8,13 +8,14 @@ const SkillMapping = () => {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingResource, setEditingResource] = useState(null);
   const [newResource, setNewResource] = useState({
     name: '',
     role: '',
     primarySkill: '',
     secondarySkill: '',
     proficiencyLevel: 'Intermediate',
-    experienceYears: 0,
+    experienceYears: '',
     department: 'Engineering'
   });
 
@@ -36,25 +37,63 @@ const SkillMapping = () => {
     }
   };
 
-  const handleAddResource = async (e) => {
+  const handleEditResource = (res) => {
+    setEditingResource(res);
+    setNewResource({
+      name: res.name,
+      role: res.role,
+      primarySkill: res.primarySkill,
+      secondarySkill: res.secondarySkill,
+      proficiencyLevel: res.proficiencyLevel,
+      experienceYears: res.experienceYears,
+      department: res.department
+    });
+    setShowAddModal(true);
+  };
+
+  const handleDeleteResource = async (id) => {
+    if (window.confirm("Are you sure you want to delete this resource mapping?")) {
+      try {
+        await resourceAPI.delete(id);
+        setResources(resources.filter(r => r._id !== id));
+      } catch (err) {
+        console.error("Error deleting resource:", err);
+        alert('Failed to delete resource mapping');
+      }
+    }
+  };
+
+  const handleSubmitResource = async (e) => {
     e.preventDefault();
     try {
-      await resourceAPI.create(newResource);
-      alert('Resource skills mapped successfully!');
+      const data = {
+        ...newResource,
+        experienceYears: Number(newResource.experienceYears)
+      };
+
+      if (editingResource) {
+        const response = await resourceAPI.update(editingResource._id, data);
+        setResources(resources.map(r => r._id === editingResource._id ? response.data : r));
+        alert('Resource skills updated successfully!');
+      } else {
+        const response = await resourceAPI.create(data);
+        setResources([response.data, ...resources]);
+        alert('Resource skills mapped successfully!');
+      }
       setShowAddModal(false);
+      setEditingResource(null);
       setNewResource({
         name: '',
         role: '',
         primarySkill: '',
         secondarySkill: '',
         proficiencyLevel: 'Intermediate',
-        experienceYears: 0,
+        experienceYears: '',
         department: 'Engineering'
       });
-      fetchResources();
     } catch (err) {
-      console.error("Error adding resource:", err);
-      alert('Failed to map resource skills');
+      console.error("Error saving resource:", err);
+      alert('Failed to save resource skills');
     }
   };
 
@@ -235,49 +274,60 @@ const SkillMapping = () => {
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Secondary Skill</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Proficiency</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Exp.</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500 font-bold tracking-widest uppercase text-[10px]">Loading skills...</td>
+                  <td colSpan="6" className="px-6 py-12 text-center text-slate-500 font-bold tracking-widest uppercase text-[10px]">Loading skills...</td>
                 </tr>
               ) : filteredSkills.length > 0 ? (
                 filteredSkills.map((s) => (
-                  <tr key={s._id} className="hover:bg-slate-800/50 transition-colors">
+                  <tr key={s._id} className="hover:bg-slate-800/50 transition-colors group">
                     <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-100">{s.name}</span>
+                      <span className="text-sm font-bold text-slate-200">{s.name}</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-2 py-1 rounded-md">{s.primarySkill}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-xs font-medium text-slate-300 bg-slate-800 px-2 py-1 rounded-md">{s.secondarySkill}</span>
+                      <span className="text-xs font-bold text-slate-400 bg-slate-800 px-2 py-1 rounded-md">{s.secondarySkill || 'N/A'}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
+                      <div className="flex gap-0.5">
+                        {[...Array(5)].map((_, i) => (
                           <Star 
-                            key={star} 
-                            className={`w-3 h-3 ${
-                              s.proficiencyLevel === 'Expert' ? 'text-amber-400 fill-amber-400' : 
-                              s.proficiencyLevel === 'Advanced' && star <= 4 ? 'text-amber-400 fill-amber-400' :
-                              s.proficiencyLevel === 'Intermediate' && star <= 3 ? 'text-amber-400 fill-amber-400' :
-                              s.proficiencyLevel === 'Beginner' && star <= 2 ? 'text-amber-400 fill-amber-400' :
-                              'text-slate-700 fill-slate-700'
-                            }`} 
+                            key={i} 
+                            className={`w-3 h-3 ${i < (s.proficiencyLevel === 'Expert' ? 5 : s.proficiencyLevel === 'Advanced' ? 4 : s.proficiencyLevel === 'Intermediate' ? 3 : 2) ? 'text-amber-500 fill-amber-500' : 'text-slate-700'}`} 
                           />
                         ))}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-xs font-bold text-slate-400">{s.experienceYears} Years</span>
+                      <span className="text-sm text-slate-400 font-medium">{s.experienceYears} Years</span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200">
+                        <button 
+                          onClick={() => handleEditResource(s)}
+                          className="p-2 text-slate-500 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-all"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteResource(s._id)}
+                          className="p-2 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500 font-bold tracking-widest uppercase text-[10px]">No skills mapped yet.</td>
+                  <td colSpan="6" className="px-6 py-12 text-center text-slate-500 font-bold tracking-widest uppercase text-[10px]">No resources found.</td>
                 </tr>
               )}
             </tbody>
@@ -285,24 +335,40 @@ const SkillMapping = () => {
         </div>
       </div>
 
-      {/* Add Skill Mapping Modal */}
+      {/* Add/Edit Skill Mapping Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-slate-900 border border-slate-800 rounded-[2rem] w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="p-8 border-b border-slate-800 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-black text-white tracking-tight">Add Skill Mapping</h2>
-                <p className="text-slate-400 text-xs font-bold mt-1 uppercase tracking-widest">Register talent competencies</p>
+                <h2 className="text-2xl font-black text-white tracking-tight">
+                  {editingResource ? 'Edit Skill Mapping' : 'Add Skill Mapping'}
+                </h2>
+                <p className="text-slate-400 text-xs font-bold mt-1 uppercase tracking-widest">
+                  {editingResource ? 'Update talent competencies' : 'Register talent competencies'}
+                </p>
               </div>
               <button 
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setEditingResource(null);
+                  setNewResource({
+                    name: '',
+                    role: '',
+                    primarySkill: '',
+                    secondarySkill: '',
+                    proficiencyLevel: 'Intermediate',
+                    experienceYears: '',
+                    department: 'Engineering'
+                  });
+                }}
                 className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-500"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
             
-            <form onSubmit={handleAddResource} className="p-8 space-y-6">
+            <form onSubmit={handleSubmitResource} className="p-8 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Resource Name</label>
